@@ -75,6 +75,15 @@ jobs:
       - name: Install Power Platform CLI
         uses: microsoft/powerplatform-actions/actions-install@v1
 
+      - name: Switch to target branch
+        run: |
+          git fetch
+          git checkout ${{ github.event.inputs.branch }}
+
+      - name: Clean repository before extraction (preserve .git and .github)
+        run: |
+          find . -maxdepth 1 ! -name . -a ! -name .git -a ! -name .github -exec rm -rf {} +
+
       - name: Export solution from Power Platform
         uses: microsoft/powerplatform-actions/export-solution@v1
         with:
@@ -86,18 +95,15 @@ jobs:
           solution-output-file: exported_solution.zip
           managed: ${{ env.MANAGED }}
 
-      - name: Switch to target branch
+      - name: Validate solution export
         run: |
-          git fetch
-          git checkout ${{ github.event.inputs.branch }}
-
-      - name: Clean repository before extraction (preserve .git and .github)
-        run: |
-          find . -maxdepth 1 ! -name . -a ! -name .git -a ! -name .github -exec rm -rf {} +
+          if [ ! -f exported_solution.zip ]; then
+            echo "❌ Exported ZIP not found. Export may have failed."
+            exit 1
+          fi
 
       - name: Unzip solution to repository root
-        run: |
-          unzip -o exported_solution.zip -d ./
+        run: unzip -o exported_solution.zip -d ./
 
       - name: Remove exported ZIP file
         run: rm -f exported_solution.zip
