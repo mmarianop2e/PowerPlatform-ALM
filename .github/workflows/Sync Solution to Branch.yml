@@ -86,14 +86,21 @@ jobs:
           solution-output-file: exported_solution.zip
           managed: ${{ env.MANAGED }}
 
-      - name: Unzip solution to repository root
-        run: |
-          unzip -o exported_solution.zip -d ./
-
       - name: Switch to target branch
         run: |
           git fetch
           git checkout ${{ github.event.inputs.branch }}
+
+      - name: Clean repository before extraction (preserve .git and .github)
+        run: |
+          find . -maxdepth 1 ! -name . -a ! -name .git -a ! -name .github -exec rm -rf {} +
+
+      - name: Unzip solution to repository root
+        run: |
+          unzip -o exported_solution.zip -d ./
+
+      - name: Remove exported ZIP file
+        run: rm -f exported_solution.zip
 
       - name: Commit and push all files
         env:
