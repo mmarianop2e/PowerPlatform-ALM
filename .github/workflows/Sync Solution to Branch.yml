@@ -26,7 +26,7 @@ on:
           - hotfix
 
       solution_name:
-        description: 'Name of the solution to export'
+        description: 'Name of the solution to export (logical name)'
         required: true
 
 jobs:
@@ -71,6 +71,9 @@ jobs:
               echo "Invalid environment: ${{ github.event.inputs.environment }}"; exit 1
               ;;
           esac
+
+      - name: Install Power Platform CLI
+        uses: microsoft/powerplatform-actions/actions-install@v1
 
       - name: Export solution from Power Platform
         uses: microsoft/powerplatform-actions/export-solution@v1
