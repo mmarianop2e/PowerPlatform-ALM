@@ -1,4 +1,4 @@
-name: Sync Solution to Branch
+name: Import Solution (Sync Solution to Branch)
 
 on:
   workflow_dispatch:
@@ -70,15 +70,6 @@ jobs:
       - name: Install Power Platform CLI
         uses: microsoft/powerplatform-actions/actions-install@v1
 
-      - name: Switch to target branch
-        run: |
-          git fetch
-          git checkout ${{ github.event.inputs.branch }}
-
-      - name: Clean repository before extraction (preserve .git and .github)
-        run: |
-          find . -maxdepth 1 ! -name . -a ! -name .git -a ! -name .github -exec rm -rf {} +
-
       - name: Export solution from Power Platform (unmanaged)
         uses: microsoft/powerplatform-actions/export-solution@v1
         with:
@@ -90,12 +81,14 @@ jobs:
           solution-output-file: exported_solution.zip
           managed: false
 
-      - name: Validate solution export
+      - name: Switch to target branch
         run: |
-          if [ ! -f exported_solution.zip ]; then
-            echo "❌ Exported ZIP not found. Export may have failed."
-            exit 1
-          fi
+          git fetch
+          git checkout ${{ github.event.inputs.branch }}
+
+      - name: Clean repository before extraction (preserve .git and .github)
+        run: |
+          find . -maxdepth 1 ! -name . -a ! -name .git -a ! -name .github -exec rm -rf {} +
 
       - name: Unzip solution to repository root
         run: unzip -o exported_solution.zip -d ./
@@ -114,6 +107,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Sync solution '${{ github.event.inputs.solution_name }}' from '${{ github.event.inputs.environment }}' environment"
+            git commit -m "Export solution '${{ github.event.inputs.solution_name }}' from '${{ github.event.inputs.environment }}'"
             git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:${{ github.event.inputs.branch }}
           fi
