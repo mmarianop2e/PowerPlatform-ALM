@@ -1,4 +1,4 @@
-name: Import Solution (Sync Solution to Branch)
+name: Import Solution
 
 on:
   workflow_dispatch:
