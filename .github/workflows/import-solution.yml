@@ -67,6 +67,15 @@ jobs:
               ;;
           esac
 
+      - name: Switch to target branch
+        run: |
+          git fetch
+          git checkout ${{ github.event.inputs.branch }}
+
+      - name: Clean repository before unpack (preserve .git and .github)
+        run: |
+          find . -maxdepth 1 ! -name . -a ! -name .git -a ! -name .github -exec rm -rf {} +
+
       - name: Install Power Platform CLI
         uses: microsoft/powerplatform-actions/actions-install@v1
 
@@ -80,15 +89,6 @@ jobs:
           solution-name: ${{ github.event.inputs.solution_name }}
           solution-output-file: exported_solution.zip
           managed: false
-
-      - name: Switch to target branch
-        run: |
-          git fetch
-          git checkout ${{ github.event.inputs.branch }}
-
-      - name: Clean repository before unpacking (preserve .git and .github)
-        run: |
-          find . -maxdepth 1 ! -name . -a ! -name .git -a ! -name .github -exec rm -rf {} +
 
       - name: Unpack solution to repository root
         uses: microsoft/powerplatform-actions/unpack-solution@v1
