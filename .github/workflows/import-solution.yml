@@ -82,11 +82,11 @@ jobs:
       - name: Clone solution from Power Platform (project format)
         run: |
           $POWERPLATFORMTOOLS_PACPATH auth clear
-          $POWERPLATFORMTOOLS_PACPATH auth create --kind SERVICEPRINCIPAL \
-            --clientId "${{ env.CLIENT_ID }}" \
-            --clientSecret "${{ env.CLIENT_SECRET }}" \
-            --tenant "${{ env.TENANT_ID }}" \
-            --url "${{ env.ENV_URL }}"
+          $POWERPLATFORMTOOLS_PACPATH auth create \
+            --applicationId "$CLIENT_ID" \
+            --clientSecret "$CLIENT_SECRET" \
+            --tenant "$TENANT_ID" \
+            --environment "$ENV_URL"
 
           $POWERPLATFORMTOOLS_PACPATH solution clone \
             --name "${{ github.event.inputs.solution_name }}" \
