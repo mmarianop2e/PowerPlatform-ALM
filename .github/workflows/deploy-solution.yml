@@ -1,4 +1,4 @@
-name: Deploy Solution (Deploy Branch to Solution)
+name: Deploy Solution
 
 on:
   workflow_dispatch:
