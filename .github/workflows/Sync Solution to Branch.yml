@@ -44,28 +44,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set environment URL and managed flag
+      - name: Set environment URL
         run: |
           case "${{ github.event.inputs.environment }}" in
             dev)
               echo "ENV_URL=${{ secrets.DEV_ENV_URL }}" >> $GITHUB_ENV
-              echo "MANAGED=false" >> $GITHUB_ENV
               ;;
             uat)
               echo "ENV_URL=${{ secrets.UAT_ENV_URL }}" >> $GITHUB_ENV
-              echo "MANAGED=true" >> $GITHUB_ENV
               ;;
             prev)
               echo "ENV_URL=${{ secrets.PREV_ENV_URL }}" >> $GITHUB_ENV
-              echo "MANAGED=true" >> $GITHUB_ENV
               ;;
             prod)
               echo "ENV_URL=${{ secrets.PROD_ENV_URL }}" >> $GITHUB_ENV
-              echo "MANAGED=true" >> $GITHUB_ENV
               ;;
             hotfix)
               echo "ENV_URL=${{ secrets.HOTFIX_ENV_URL }}" >> $GITHUB_ENV
-              echo "MANAGED=false" >> $GITHUB_ENV
               ;;
             *)
               echo "Invalid environment: ${{ github.event.inputs.environment }}"; exit 1
@@ -84,7 +79,7 @@ jobs:
         run: |
           find . -maxdepth 1 ! -name . -a ! -name .git -a ! -name .github -exec rm -rf {} +
 
-      - name: Export solution from Power Platform
+      - name: Export solution from Power Platform (unmanaged)
         uses: microsoft/powerplatform-actions/export-solution@v1
         with:
           environment-url: ${{ env.ENV_URL }}
@@ -93,7 +88,7 @@ jobs:
           tenant-id: ${{ env.TENANT_ID }}
           solution-name: ${{ github.event.inputs.solution_name }}
           solution-output-file: exported_solution.zip
-          managed: ${{ env.MANAGED }}
+          managed: false
 
       - name: Validate solution export
         run: |
