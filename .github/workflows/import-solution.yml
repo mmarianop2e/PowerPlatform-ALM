@@ -26,7 +26,7 @@ on:
           - hotfix
 
       solution_name:
-        description: 'Name of the solution to export (logical name)'
+        description: 'Name of the solution to clone (logical name)'
         required: true
 
 jobs:
@@ -72,7 +72,7 @@ jobs:
           git fetch
           git checkout ${{ github.event.inputs.branch }}
 
-      - name: Clean repository before cloning (preserve .git and .github)
+      - name: Clean repository before sync (preserve .git and .github)
         run: |
           find . -maxdepth 1 ! -name . -a ! -name .git -a ! -name .github -exec rm -rf {} +
 
@@ -81,21 +81,21 @@ jobs:
 
       - name: Clone solution from Power Platform (project format)
         run: |
-          pac auth clear
-          pac auth create --kind SERVICEPRINCIPAL \
+          $POWERPLATFORMTOOLS_PACPATH auth clear
+          $POWERPLATFORMTOOLS_PACPATH auth create --kind SERVICEPRINCIPAL \
             --clientId "${{ env.CLIENT_ID }}" \
             --clientSecret "${{ env.CLIENT_SECRET }}" \
             --tenant "${{ env.TENANT_ID }}" \
             --url "${{ env.ENV_URL }}"
 
-          pac solution clone \
+          $POWERPLATFORMTOOLS_PACPATH solution clone \
             --name "${{ github.event.inputs.solution_name }}" \
             --outputDirectory . \
             --packagetype Both \
             --include general,autonumbering \
             --localize
 
-      - name: Commit and push cloned solution
+      - name: Commit and push solution project files
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
