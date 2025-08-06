@@ -86,12 +86,13 @@ jobs:
           git fetch
           git checkout ${{ github.event.inputs.branch }}
 
-      - name: Clean repository before extraction (preserve .git and .github)
+      - name: Clean repository before unpacking (preserve .git and .github)
         run: |
           find . -maxdepth 1 ! -name . -a ! -name .git -a ! -name .github -exec rm -rf {} +
 
-      - name: Unzip solution to repository root
-        run: unzip -o exported_solution.zip -d ./
+      - name: Unpack solution using PAC CLI
+        run: |
+          pac solution unpack --zipfile exported_solution.zip --folder . --allowDelete
 
       - name: Remove exported ZIP file
         run: rm -f exported_solution.zip
@@ -107,6 +108,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Export solution '${{ github.event.inputs.solution_name }}' from '${{ github.event.inputs.environment }}'"
+            git commit -m "Export and unpack solution '${{ github.event.inputs.solution_name }}' from '${{ github.event.inputs.environment }}'"
             git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:${{ github.event.inputs.branch }}
           fi
