@@ -1,0 +1,114 @@
+name: Deploy Branch to Solution
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (dev, uat, prev, prod, hotfix)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - uat
+          - prev
+          - prod
+          - hotfix
+
+      branch:
+        description: 'Source Git branch to deploy (dev, uat, prev, prod, hotfix)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - uat
+          - prev
+          - prod
+          - hotfix
+
+      solution_name:
+        description: 'Name of the solution to deploy (logical name)'
+        required: true
+
+jobs:
+  deploy-solution:
+    runs-on: ubuntu-latest
+
+    env:
+      CLIENT_ID: ${{ secrets.POWER_PLATFORM_CLIENT_ID }}
+      TENANT_ID: ${{ secrets.POWER_PLATFORM_TENANT_ID }}
+      CLIENT_SECRET: ${{ secrets.POWER_PLATFORM_CLIENT_SECRET }}
+
+    steps:
+      - name: Checkout repository and branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Set environment URL and managed flag
+        run: |
+          case "${{ github.event.inputs.environment }}" in
+            dev)
+              echo "ENV_URL=${{ secrets.DEV_ENV_URL }}" >> $GITHUB_ENV
+              echo "MANAGED=false" >> $GITHUB_ENV
+              ;;
+            uat)
+              echo "ENV_URL=${{ secrets.UAT_ENV_URL }}" >> $GITHUB_ENV
+              echo "MANAGED=true" >> $GITHUB_ENV
+              ;;
+            prev)
+              echo "ENV_URL=${{ secrets.PREV_ENV_URL }}" >> $GITHUB_ENV
+              echo "MANAGED=true" >> $GITHUB_ENV
+              ;;
+            prod)
+              echo "ENV_URL=${{ secrets.PROD_ENV_URL }}" >> $GITHUB_ENV
+              echo "MANAGED=true" >> $GITHUB_ENV
+              ;;
+            hotfix)
+              echo "ENV_URL=${{ secrets.HOTFIX_ENV_URL }}" >> $GITHUB_ENV
+              echo "MANAGED=false" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "Invalid environment: ${{ github.event.inputs.environment }}"; exit 1
+              ;;
+          esac
+
+      - name: Install Power Platform CLI
+        uses: microsoft/powerplatform-actions/actions-install@v1
+
+      - name: Pack solution from folder (always as unmanaged)
+        uses: microsoft/powerplatform-actions/pack-solution@v1
+        with:
+          solution-folder: .
+          solution-file: packed_solution.zip
+          solution-type: 'Unmanaged'
+
+      - name: Import solution to environment
+        uses: microsoft/powerplatform-actions/import-solution@v1
+        with:
+          environment-url: ${{ env.ENV_URL }}
+          app-id: ${{ env.CLIENT_ID }}
+          client-secret: ${{ env.CLIENT_SECRET }}
+          tenant-id: ${{ env.TENANT_ID }}
+          solution-file: packed_solution.zip
+          force-overwrite: true
+          publish-changes: true
+          managed: ${{ env.MANAGED }}
+
+      - name: Delete packed solution file from branch
+        run: rm -f packed_solution.zip
+
+      - name: Commit and push cleanup
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add .
+          if git diff --cached --quiet; then
+            echo "No cleanup changes to commit."
+          else
+            git commit -m "Remove packed solution after importing to '${{ github.event.inputs.environment }}'"
+            git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:${{ github.event.inputs.branch }}
+          fi
