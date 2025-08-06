@@ -30,7 +30,7 @@ on:
         required: true
 
 jobs:
-  export-and-sync:
+  clone-and-sync:
     runs-on: ubuntu-latest
 
     env:
@@ -72,35 +72,30 @@ jobs:
           git fetch
           git checkout ${{ github.event.inputs.branch }}
 
-      - name: Clean repository before unpack (preserve .git and .github)
+      - name: Clean repository before cloning (preserve .git and .github)
         run: |
           find . -maxdepth 1 ! -name . -a ! -name .git -a ! -name .github -exec rm -rf {} +
 
       - name: Install Power Platform CLI
         uses: microsoft/powerplatform-actions/actions-install@v1
 
-      - name: Export solution from Power Platform (unmanaged)
-        uses: microsoft/powerplatform-actions/export-solution@v1
-        with:
-          environment-url: ${{ env.ENV_URL }}
-          app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ env.CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
-          solution-name: ${{ github.event.inputs.solution_name }}
-          solution-output-file: exported_solution.zip
-          managed: false
+      - name: Clone solution from Power Platform (project format)
+        run: |
+          pac auth clear
+          pac auth create --kind SERVICEPRINCIPAL \
+            --clientId "${{ env.CLIENT_ID }}" \
+            --clientSecret "${{ env.CLIENT_SECRET }}" \
+            --tenant "${{ env.TENANT_ID }}" \
+            --url "${{ env.ENV_URL }}"
 
-      - name: Unpack solution to repository root
-        uses: microsoft/powerplatform-actions/unpack-solution@v1
-        with:
-          solution-file: exported_solution.zip
-          solution-folder: .
-          solution-type: Unmanaged
+          pac solution clone \
+            --name "${{ github.event.inputs.solution_name }}" \
+            --outputDirectory . \
+            --packagetype Both \
+            --include general,autonumbering \
+            --localize
 
-      - name: Remove exported ZIP file
-        run: rm -f exported_solution.zip
-
-      - name: Commit and push all files
+      - name: Commit and push cloned solution
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -111,6 +106,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Export solution '${{ github.event.inputs.solution_name }}' from '${{ github.event.inputs.environment }}'"
+            git commit -m "Clone solution '${{ github.event.inputs.solution_name }}' from '${{ github.event.inputs.environment }}'"
             git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:${{ github.event.inputs.branch }}
           fi
