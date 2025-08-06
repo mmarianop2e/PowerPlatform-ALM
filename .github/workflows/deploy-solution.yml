@@ -45,28 +45,28 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.branch }}
 
-      - name: Set environment URL and managed flag
+      - name: Set environment URL and solution type
         run: |
           case "${{ github.event.inputs.environment }}" in
             dev)
               echo "ENV_URL=${{ secrets.DEV_ENV_URL }}" >> $GITHUB_ENV
-              echo "MANAGED=false" >> $GITHUB_ENV
+              echo "SOLUTION_TYPE=Unmanaged" >> $GITHUB_ENV
               ;;
             uat)
               echo "ENV_URL=${{ secrets.UAT_ENV_URL }}" >> $GITHUB_ENV
-              echo "MANAGED=true" >> $GITHUB_ENV
+              echo "SOLUTION_TYPE=Managed" >> $GITHUB_ENV
               ;;
             prev)
               echo "ENV_URL=${{ secrets.PREV_ENV_URL }}" >> $GITHUB_ENV
-              echo "MANAGED=true" >> $GITHUB_ENV
+              echo "SOLUTION_TYPE=Managed" >> $GITHUB_ENV
               ;;
             prod)
               echo "ENV_URL=${{ secrets.PROD_ENV_URL }}" >> $GITHUB_ENV
-              echo "MANAGED=true" >> $GITHUB_ENV
+              echo "SOLUTION_TYPE=Managed" >> $GITHUB_ENV
               ;;
             hotfix)
               echo "ENV_URL=${{ secrets.HOTFIX_ENV_URL }}" >> $GITHUB_ENV
-              echo "MANAGED=false" >> $GITHUB_ENV
+              echo "SOLUTION_TYPE=Unmanaged" >> $GITHUB_ENV
               ;;
             *)
               echo "Invalid environment: ${{ github.event.inputs.environment }}"; exit 1
@@ -76,12 +76,12 @@ jobs:
       - name: Install Power Platform CLI
         uses: microsoft/powerplatform-actions/actions-install@v1
 
-      - name: Pack solution from folder (always as unmanaged)
+      - name: Pack solution from folder
         uses: microsoft/powerplatform-actions/pack-solution@v1
         with:
           solution-folder: .
           solution-file: packed_solution.zip
-          solution-type: 'Unmanaged'
+          solution-type: ${{ env.SOLUTION_TYPE }}
 
       - name: Import solution to environment
         uses: microsoft/powerplatform-actions/import-solution@v1
@@ -93,7 +93,6 @@ jobs:
           solution-file: packed_solution.zip
           force-overwrite: true
           publish-changes: true
-          managed: ${{ env.MANAGED }}
 
       - name: Delete packed solution file from branch
         run: rm -f packed_solution.zip
